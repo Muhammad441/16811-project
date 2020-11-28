@@ -18,24 +18,18 @@ class Visualizer:
         plt.show()
 
     def traj_vis(self, traj):
+        fig, ax = plt.subplots()
+        ax.imshow(self.map)
+
+        state = traj[0]
+        x_c, y_c = state[0], state[1]
+        Ln, = ax.plot(x_c,y_c,'-*',label="robot")
         plt.ion()
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+        plt.show()
         for i in range(len(traj)):
-            # fig, ax = plt.plot()
-            ax.imshow(self.map)
             state = traj[i]
             x_c, y_c = state[0], state[1]
-            ax.plot(x_c,y_c,'-*',label="robot")
-            # ax.plot(x_c[0],y_c[0],'^',label="start")
-            # # plt.set_aspect('equal', adjustable='box')
-            # plt.show()
-            # plt.show()
-            fig.canvas.draw()
-            time.sleep(0.1)
-            fig.canvas.flush_events()
-
-            # fig.clf()
-            # plt.clf()
-            # ax.clear()
-        
+            Ln.set_xdata(x_c)
+            Ln.set_ydata(y_c)
+            plt.pause(0.2)
+        plt.waitforbuttonpress()
