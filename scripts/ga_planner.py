@@ -7,6 +7,7 @@ import copy
 import pdb
 import heapq
 from itertools import count
+import pickle
 
 class GAPlanner:
     def __init__(self, start, goal, num_waypoints, map, manipulator):
@@ -32,7 +33,7 @@ class GAPlanner:
         self.population = self.generateInitialPopulation()
         for i in range(max_iters):
             self.population = self.next_generation(self.population)
-            print"Opt cost", self.population[0][0]
+            print ("Opt cost", self.population[0][0], "Iteration:", i)
     
     def push_heap(self,heap,value_data):
         cv = next(self.tiebreaker)
@@ -59,7 +60,7 @@ class GAPlanner:
         return population
     
     def selection(self,population):
-        return heapq.nsmallest(self.population_size/2,population)
+        return heapq.nsmallest(int(self.population_size/2),population)
     
     def pairing(self,population):
         ## Assumes that the population is sorted
@@ -70,20 +71,25 @@ class GAPlanner:
     def mating(self,parents):
         parent_0 = parents[0].reshape((1,-1),order='C')
         parent_1 = parents[1].reshape((1,-1),order='C')
-        mating_point = np.random.randint(self.manipulator.num_links+1, parent_0.shape[1]-self.manipulator.num_links)
-        offspring_0 = np.concatenate([ parent_0[0:1,0:mating_point],parent_1[0:1,mating_point:] ],axis=1)
-        offspring_1 = np.concatenate([ parent_1[0:1,0:mating_point],parent_0[0:1,mating_point:] ],axis=1)
+        mating_point_1 = np.random.randint(self.manipulator.num_links+1, parent_0.shape[1]-self.manipulator.num_links)
+        mating_point_2 = np.random.randint(self.manipulator.num_links+1, parent_0.shape[1]-self.manipulator.num_links)
+        mp_min = min(mating_point_1,mating_point_2)
+        mp_max = max(mating_point_1,mating_point_2)
+        offspring_0 = np.concatenate([ parent_0[0:1,0:mp_min],parent_1[0:1,mp_min:mp_max],parent_0[0:1,mp_max:] ],axis=1)
+        offspring_1 = np.concatenate([ parent_1[0:1,0:mp_min],parent_0[0:1,mp_min:mp_max],parent_1[0:1,mp_max:] ],axis=1)
         offspring_0 = offspring_0.reshape((self.num_waypoints,self.manipulator.num_links),order='C')
         offspring_1 = offspring_1.reshape((self.num_waypoints,self.manipulator.num_links),order='C')
         return [offspring_0, offspring_1]
     
-    def mutation(self,population,num=2):
+    def mutation(self,population,num=2,eliteism=0):
         affected = []
         for i in range(num):
-            sel_indiv = np.random.randint(0,len(population))
+            sel_indiv = np.random.randint(eliteism,len(population))
             sel_wp = np.random.randint(1,self.num_waypoints-1)
             sel_lk = np.random.randint(0,self.manipulator.num_links)
-            population[sel_indiv][2][sel_wp,sel_lk] = np.random.uniform(low=-3.14159, high=3.14159)
+            #population[sel_indiv][2][sel_wp,sel_lk] = np.random.uniform(low=-3.14159, high=3.14159)
+            population[sel_indiv][2][sel_wp,sel_lk] = np.random.normal(population[sel_indiv][2][sel_wp,sel_lk], scale=0.3)
+            population[sel_indiv][2][sel_wp,sel_lk] = np.clip(population[sel_indiv][2][sel_wp,sel_lk], -3.14159, 3.14159)
             affected.append(sel_indiv)
         new_pop = []
         for i in range(len(population)):
@@ -97,6 +103,7 @@ class GAPlanner:
 
     def next_generation(self,population):
         selected_population = self.selection(population)
+        sel_pol_num = len(selected_population)
         selected_population.sort()
         parents = self.pairing(selected_population)
         offsprings = [self.mating(parents[x]) for x in range(len(parents))]
@@ -107,7 +114,7 @@ class GAPlanner:
                 fs = self.trajUnfitScore(traj)
                 if fs >= 0:
                     self.push_heap(unmutated, (fs, traj))
-        mutated = self.mutation(unmutated,num=2)
+        mutated = self.mutation(unmutated,num=100,eliteism=1)
         random_population = self.generateRandomPopulation(self.population_size-len(mutated))
         mutated = mutated+random_population
         mutated.sort()
@@ -150,18 +157,24 @@ def main():
     manipulator = Manipulator(base_position = np.array((150,250)))
     map = Map1()
     vis = Visualizer(map.map)
-    start = np.array((0.1,0.2,0.1,0.1))
-    goal = np.array((0.1,0.2,-1.5,0.1))
+    start = np.array((0.1,0,0,0))
+    goal = np.array((0.1,1.8,1.8,1.55))
 
     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
 
-    planner.optimize(population_size=50,alpha=900.0, max_iters=1000)
-    #print(planner.trajUnfitScore(planner.traj))
+    planner.optimize(population_size=50,alpha=900.0, max_iters=100)
+    
+    # path = []
+    # for i in range(planner.traj.shape[0]):
+    #     path.append(manipulator.ForwardKinematics(planner.traj[i]))
     
     path = []
     for i in range(planner.traj.shape[0]):
         path.append(manipulator.ForwardKinematics(planner.population[0][2][i,:]))
+    
+    with open('filename.pickle', 'wb') as handle:
+        pickle.dump(path, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     vis.traj_vis(path)
     plt.show()
