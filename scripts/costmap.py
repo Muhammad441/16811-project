@@ -20,9 +20,9 @@ class CostMap:
 
         self.map[min_x:max_x, min_y:max_y] = 0
 
-    def distanceField(self):
-        self.distance_field = distance_transform_edt(self.map)
-        # self.visualize(self.distance_field)
+    def computeCost(self):
+        distance_field = distance_transform_edt(self.map)
+        self.cost_map = np.sqrt(self.x_len**2 + self.y_len**2) - distance_field
 
     def visualize(self, map):
         plt.imshow(map)
@@ -33,7 +33,7 @@ class Map1(CostMap):
         CostMap.__init__(self)
         self.addObstacle(cx = 75, cy = 300, lx = 150, ly = 15)
         self.addObstacle(cx = 245, cy = 450, lx = 15, ly = 200)
-        self.distanceField()
+        self.computeCost()
 
 
 
