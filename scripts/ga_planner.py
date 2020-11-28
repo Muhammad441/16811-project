@@ -26,21 +26,20 @@ class GAPlanner:
             traj[i] = traj[0] + (self.goal - self.start)*i/self.num_waypoints
         return traj
     
-    def optimize(self,population_size=50, alpha=1.0):
+    def optimize(self,population_size=50, alpha=1.0, max_iters=50):
         self.alpha=alpha
         self.population_size=population_size
         self.population = self.generateInitialPopulation()
-        for i in range(10):
+        for i in range(max_iters):
             self.population = self.next_generation(self.population)
-            for j in range(50):
-                print(self.population[j][1].shape)
             print"Opt cost", self.population[0][0]
     
     def push_heap(self,heap,value_data):
-        if self.tiebreaker>12939220230:
+        cv = next(self.tiebreaker)
+        if cv>12939220230:
             self.tiebreaker = count()
         if value_data[0] >= 0:
-            heapq.heappush(heap,(value_data[0],value_data[1],next(self.tiebreaker)))
+            heapq.heappush(heap,(value_data[0],cv,value_data[1]))
 
     def generateInitialPopulation(self):
         population = []
@@ -64,8 +63,8 @@ class GAPlanner:
     
     def pairing(self,population):
         ## Assumes that the population is sorted
-        parents = [[population[x][1],population[x+1][1]] 
-                   for x in range(len(population)//2)] 
+        parents = [[population[x][2],population[x+1][2]] 
+                   for x in range(len(population)//2)]
         return parents
     
     def mating(self,parents):
@@ -76,44 +75,38 @@ class GAPlanner:
         offspring_1 = np.concatenate([ parent_1[0:1,0:mating_point],parent_0[0:1,mating_point:] ],axis=1)
         offspring_0 = offspring_0.reshape((self.num_waypoints,self.manipulator.num_links),order='C')
         offspring_1 = offspring_1.reshape((self.num_waypoints,self.manipulator.num_links),order='C')
-        return offspring_0, offspring_1
+        return [offspring_0, offspring_1]
     
     def mutation(self,population,num=2):
         affected = []
         for i in range(num):
-            sel_indiv = np.random.randint(0,self.population_size)
-            sel_wp = np.random.randint(0,self.num_waypoints)
+            sel_indiv = np.random.randint(0,len(population))
+            sel_wp = np.random.randint(1,self.num_waypoints-1)
             sel_lk = np.random.randint(0,self.manipulator.num_links)
-            population[sel_indiv][1][sel_wp,sel_lk] = np.random.uniform(low=-3.14159, high=3.14159)
+            population[sel_indiv][2][sel_wp,sel_lk] = np.random.uniform(low=-3.14159, high=3.14159)
             affected.append(sel_indiv)
         new_pop = []
         for i in range(len(population)):
             if i in affected:
-                fs = self.trajUnfitScore(population[i][1])
-                self.push_heap(new_pop, (fs, population[i][1]))
+                fs = self.trajUnfitScore(population[i][2])
+                self.push_heap(new_pop, (fs, population[i][2]))
             else:
-                self.push_heap(new_pop, (population[i][0], population[i][1]))
+                self.push_heap(new_pop, (population[i][0], population[i][2]))
         return new_pop
         
 
     def next_generation(self,population):
         selected_population = self.selection(population)
-        population.sort()
+        selected_population.sort()
         parents = self.pairing(selected_population)
-        offsprings = [[[self.mating(parents[x]) for x in range(len(parents))]
-                        [y][z] for z in range(2)] 
-                        for y in range(len(parents))]
-        offsprings1 = [offsprings[x][0] for x in range(len(parents))]
-        offsprings2 = [offsprings[x][1] for x in range(len(parents))]
+        offsprings = [self.mating(parents[x]) for x in range(len(parents))]
         unmutated = copy.deepcopy(selected_population)
-        for i in range(len(offsprings1)):
-            fs = self.trajUnfitScore(offsprings1[i])
-            if fs >= 0:
-                self.push_heap(unmutated, (fs, offsprings1[i]))
-        for i in range(len(offsprings2)):
-            fs = self.trajUnfitScore(offsprings2[i])
-            if fs >= 0:
-                self.push_heap(unmutated, (fs, offsprings2[i]))
+        for i in range(len(offsprings)):
+            for j in range(2):
+                traj = offsprings[i][j]
+                fs = self.trajUnfitScore(traj)
+                if fs >= 0:
+                    self.push_heap(unmutated, (fs, traj))
         mutated = self.mutation(unmutated,num=2)
         random_population = self.generateRandomPopulation(self.population_size-len(mutated))
         mutated = mutated+random_population
@@ -134,7 +127,7 @@ class GAPlanner:
         for i in range(1,self.num_waypoints-1):
             dist_p = np.linalg.norm(traj[i,:]-traj[i-1,:])
             dist_n = np.linalg.norm(traj[i+1,:]-traj[i,:])
-            trajCost += self.alpha*(dist_p+dist_n)
+            trajCost += self.alpha*np.exp(dist_p+dist_n)
 
         ## Compute cost due to obstacles
         for i in range(self.num_waypoints):
@@ -163,12 +156,12 @@ def main():
     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
 
-    planner.optimize()
+    planner.optimize(population_size=50,alpha=900.0, max_iters=1000)
     #print(planner.trajUnfitScore(planner.traj))
     
     path = []
     for i in range(planner.traj.shape[0]):
-        path.append(manipulator.ForwardKinematics(planner.population[4][1][i,:]))
+        path.append(manipulator.ForwardKinematics(planner.population[0][2][i,:]))
 
     vis.traj_vis(path)
     plt.show()
