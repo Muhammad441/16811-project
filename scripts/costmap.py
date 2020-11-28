@@ -43,6 +43,14 @@ class Map1(CostMap):
         self.addObstacle(cx = 245, cy = 450, lx = 15, ly = 200)
         self.computeCost()
 
+class Map2(CostMap):
+    def __init__(self):
+        CostMap.__init__(self)
+        self.addObstacle(cx = 75, cy = 300, lx = 150, ly = 15)
+        self.addObstacle(cx = 245, cy = 450, lx = 15, ly = 200)
+        self.computeCost()
+        self.cost_map = np.where(self.cost_map < 45, 0, self.cost_map)
+
 
 
 def main():

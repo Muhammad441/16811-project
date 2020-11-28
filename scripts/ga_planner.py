@@ -1,13 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from visualize import Visualizer
-from costmap import Map1
+from costmap import Map1, Map2
 from manipulator import Manipulator
 import copy 
 import pdb
 import heapq
 from itertools import count
 import pickle
+from sympy import Polygon
+from scipy.ndimage.morphology import binary_fill_holes as imfill
+from PIL import Image, ImageDraw
 
 class GAPlanner:
     def __init__(self, start, goal, num_waypoints, map, manipulator):
@@ -16,24 +19,28 @@ class GAPlanner:
         self.num_waypoints = num_waypoints
         self.map = map
         self.manipulator = manipulator
-        self.traj = self.seedPath()
+        self.traj = self.seedPath(self.start,self.goal,self.num_waypoints)
         self.tiebreaker = count()
     
-    def seedPath(self):
-        traj = np.zeros((self.num_waypoints, self.manipulator.num_links))
-        traj[0] = self.start
-        traj[-1] = self.goal
-        for i in range(1, self.num_waypoints):
-            traj[i] = traj[0] + (self.goal - self.start)*i/self.num_waypoints
+    def seedPath(self,start,goal,num_waypoints):
+        traj = np.zeros((num_waypoints, self.manipulator.num_links))
+        traj[0] = start
+        traj[-1] = goal
+        for i in range(1, num_waypoints):
+            traj[i] = traj[0] + (goal - start)*i/num_waypoints
         return traj
     
-    def optimize(self,population_size=50, alpha=1.0, max_iters=50):
+    def optimize(self,population_size=50, alpha=1.0, beta=1.0, max_iters=50):
         self.alpha=alpha
+        self.beta=beta
         self.population_size=population_size
+        # self.trajUnfitScore(self.traj)
         self.population = self.generateInitialPopulation()
         for i in range(max_iters):
             self.population = self.next_generation(self.population)
             print ("Opt cost", self.population[0][0], "Iteration:", i)
+            if self.population[0][0]==0:
+                break
     
     def push_heap(self,heap,value_data):
         cv = next(self.tiebreaker)
@@ -119,8 +126,9 @@ class GAPlanner:
         mutated = mutated+random_population
         mutated.sort()
         return mutated
-        
 
+    def PolyArea(self,x,y):
+        return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1))) 
     
     def trajUnfitScore(self,traj):
         """Fitness score of a trajectory is comprised of:
@@ -130,49 +138,70 @@ class GAPlanner:
         """
         trajCost = 0.0
 
-        ## Compute cost due to smoothness
-        for i in range(1,self.num_waypoints-1):
-            dist_p = np.linalg.norm(traj[i,:]-traj[i-1,:])
-            dist_n = np.linalg.norm(traj[i+1,:]-traj[i,:])
-            trajCost += self.alpha*np.exp(dist_p+dist_n)
+        ## Compute cost for polygon area
+        img = Image.new('L', (self.map.cost_map.shape[1], self.map.cost_map.shape[0]), 0)
+        mask=None
+        for i in range(self.num_waypoints-1):
+            state1 = traj[i,:]
+            state2 = traj[i+1,:]
+            fine_traj = self.seedPath(state1,state2,10)
+            for k in range(fine_traj.shape[0]-1):
+                fine_state1 = fine_traj[k,:]
+                fine_state2 = fine_traj[k+1,:]
+                links_pts_x1, links_pts_y1, lengths_pts1 = self.manipulator.linkPts(fine_state1)
+                links_pts_x2, links_pts_y2, lengths_pts2 = self.manipulator.linkPts(fine_state2)
+                poly_c = []
+                for j in range(len(links_pts_x1)):
+                    for pt in range(len(links_pts_x1[j])):
+                        poly_c.append((links_pts_x1[j][pt],links_pts_y1[j][pt]))
+                for j in range(len(links_pts_x2)):
+                    for pt in range(len(links_pts_x2[j])):
+                        poly_c.append((links_pts_x2[-(1+j)][pt],links_pts_y2[-(1+j)][pt]))
+                ImageDraw.Draw(img).polygon(poly_c, outline=1, fill=1)
+        mask = np.array(img)
+        # plt.imshow(mask)
+        # plt.show()
+        filled = imfill(mask)
+        # plt.imshow(filled)
+        # plt.show()
+        area = self.map.cost_map[filled].sum()
+        # print ("obstacle", np.sum(self.map.cost_map[filled]==50.0))
+        trajCost += self.beta*area
 
-        ## Compute cost due to obstacles
-        for i in range(self.num_waypoints):
-            state = traj[i,:]
-            links_pts_x, links_pts_y, lengths_pts = self.manipulator.linkPts(state)
-
-            this_wp_cost = 0.0
-            for j in range(self.manipulator.num_links):
-                for pt in range(len(links_pts_x[j])):
-                    pt_y = int(links_pts_y[j][pt])
-                    pt_x = int(links_pts_x[j][pt])
-                    if pt_x >= self.map.x_len or pt_x < 0 or pt_y >= self.map.y_len or pt_y < 0:
-                        return -1
-                    this_wp_cost += self.map.cost_map[pt_y, pt_x]
-            trajCost+=this_wp_cost
         return trajCost
 
 
 def main():
     manipulator = Manipulator(base_position = np.array((150,250)))
-    map = Map1()
+    map = Map2()
     vis = Visualizer(map.map)
-    start = np.array((0.1,0,0,0))
-    goal = np.array((0.1,1.8,1.8,1.55))
+    start = np.array((0.1,0.1,1.2,0.0))
+    goal = np.array((0.1,1.9,1.9,1.6))
 
     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
 
-    planner.optimize(population_size=50,alpha=900.0, max_iters=100)
+    #print(planner.trajUnfitScore(planner.traj))
+    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=50)
     
     # path = []
     # for i in range(planner.traj.shape[0]):
     #     path.append(manipulator.ForwardKinematics(planner.traj[i]))
     
     path = []
-    for i in range(planner.traj.shape[0]):
-        path.append(manipulator.ForwardKinematics(planner.population[0][2][i,:]))
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+
+    # path = []
+    # for i in range(planner.population[0][2].shape[0]):
+    #     path.append(manipulator.ForwardKinematics(planner.population[0][2][i]))
     
+    # path = []
+    # with open('filename.pickle', 'rb') as handle:
+    #     path = pickle.load(handle)
+
     with open('filename.pickle', 'wb') as handle:
         pickle.dump(path, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
