@@ -38,4 +38,5 @@ class Visualizer:
             # fig.clf()
             # plt.clf()
             # ax.clear()
+        plt.ioff()
         
