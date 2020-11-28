@@ -10,6 +10,7 @@ class CostMap:
         self.y_len = y_len
 
         self.map = np.ones((x_len, y_len))
+        self.threshold = 50
     
     def addObstacle(self, cx, cy, lx, ly):
         min_x = max(int(cx - lx/2), 0)
@@ -22,7 +23,9 @@ class CostMap:
 
     def computeCost(self):
         distance_field = distance_transform_edt(self.map)
-        self.cost_map = np.sqrt(self.x_len**2 + self.y_len**2) - distance_field
+        high_value_flags = distance_field > self.threshold 
+        self.cost_map = self.threshold - distance_field
+        self.cost_map[high_value_flags] = 0
 
     def visualize(self, map):
         plt.imshow(map)
