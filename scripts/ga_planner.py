@@ -43,6 +43,7 @@ class GAPlanner(Planner):
             print ("Opt cost", self.population[0][0], "Iteration:", i)
             if self.population[0][0]==0:
                 break
+        self.traj = self.population[0][2]
     
     def push_heap(self,heap,value_data):
         cv = next(self.tiebreaker)
