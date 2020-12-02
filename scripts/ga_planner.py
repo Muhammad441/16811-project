@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from visualize import Visualizer
 from costmap import Map1, Map2
+import costmap
 from manipulator import Manipulator
 import copy 
 import pdb
@@ -11,8 +12,9 @@ import pickle
 from sympy import Polygon
 from scipy.ndimage.morphology import binary_fill_holes as imfill
 from PIL import Image, ImageDraw
+from planner import Planner
 
-class GAPlanner:
+class GAPlanner(Planner):
     def __init__(self, start, goal, num_waypoints, map, manipulator):
         self.start = start
         self.goal = goal
@@ -141,6 +143,7 @@ class GAPlanner:
         ## Compute cost for polygon area
         img = Image.new('L', (self.map.cost_map.shape[1], self.map.cost_map.shape[0]), 0)
         mask=None
+        smoothingCost = 0
         for i in range(self.num_waypoints-1):
             state1 = traj[i,:]
             state2 = traj[i+1,:]
@@ -158,6 +161,10 @@ class GAPlanner:
                     for pt in range(len(links_pts_x2[j])):
                         poly_c.append((links_pts_x2[-(1+j)][pt],links_pts_y2[-(1+j)][pt]))
                 ImageDraw.Draw(img).polygon(poly_c, outline=1, fill=1)
+                # img_ = Image.new('L', (self.map.cost_map.shape[1], self.map.cost_map.shape[0]), 0)
+                # ImageDraw.Draw(img_).polygon(poly_c, outline=1, fill=1)
+                # smoothingCost += np.sum(np.array(img_))
+
         mask = np.array(img)
         # plt.imshow(mask)
         # plt.show()
@@ -166,47 +173,128 @@ class GAPlanner:
         # plt.show()
         area = self.map.cost_map[filled].sum()
         # print ("obstacle", np.sum(self.map.cost_map[filled]==50.0))
-        trajCost += self.beta*area
+        trajCost += self.beta*area + 0.1*smoothingCost
 
         return trajCost
 
+# def Map3():
+#     manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 
+#                               base_position = np.array((250, 200)))
+#     map = costmap.Map4()
+#     vis = Visualizer(map.map)
+#     start = np.array((0,1.56,1.2,0,0))
+#     goal = np.array((2.0,2.0,1.56,1.56, 1.56))
+#     vis.state_vis(manipulator.ForwardKinematics(start))
+#     vis.state_vis(manipulator.ForwardKinematics(goal))
 
-def main():
-    manipulator = Manipulator(base_position = np.array((150,250)))
-    map = Map2()
+#     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
+#                  map = map, manipulator = manipulator)
+
+#     planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=300)
+#     path = []
+#     for i in range(planner.traj.shape[0]-1):
+#         traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
+#         for j in range(traj.shape[0]):
+#             path.append(manipulator.ForwardKinematics(traj[j]))
+                
+#     pdb.set_trace()
+#     vis.traj_vis(path)
+#     plt.show()
+
+def Map2(reverse_flag = False):
+    manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 
+                              base_position = np.array((100, 200)))
+    map = costmap.Map3()
     vis = Visualizer(map.map)
-    start = np.array((0.1,0.1,1.2,0.0))
-    goal = np.array((0.1,1.9,1.9,1.6))
+    if(not reverse_flag):
+        start = np.array((0.1,1.7,1.7,1.5,3.14))
+        goal = np.array((0.1,0.1,1.4,1.4, 1.4))
+    else:
+        start = np.array((0.1,0.1,1.4,1.4, 1.4))
+        goal = np.array((0.1,1.7,1.7,1.5,3.14))
 
     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
 
-    #print(planner.trajUnfitScore(planner.traj))
-    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=50)
-    
-    # path = []
-    # for i in range(planner.traj.shape[0]):
-    #     path.append(manipulator.ForwardKinematics(planner.traj[i]))
-    
-    path = []
-    for i in range(planner.traj.shape[0]-1):
-        traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
-        for j in range(traj.shape[0]):
-            path.append(manipulator.ForwardKinematics(traj[j]))
+    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=2)
 
-    # path = []
-    # for i in range(planner.population[0][2].shape[0]):
-    #     path.append(manipulator.ForwardKinematics(planner.population[0][2][i]))
+    obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
+    print(obstacle_cost, smoothness_cost)
+
+    return planner.population[0][2], obstacle_cost, smoothness_cost
+
+def Map1(reverse_flag = False):
+    manipulator = Manipulator(base_position = np.array((100, 200)))
+    map = costmap.Map1()
+    vis = Visualizer(map.map)
+    if(not reverse_flag):
+        goal = np.array((0.1,0,0,0))
+        start = np.array((0.1,1.7,1.7,1.5))
+    else:
+        start = np.array((0.1,0,0,0))
+        goal = np.array((0.1,1.7,1.7,1.5))
+
+    planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
+                 map = map, manipulator = manipulator)
+
+    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=2)
+
+    obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
+    print(obstacle_cost, smoothness_cost)
+    return planner.population[0][2], obstacle_cost, smoothness_cost
+
+def Map3(reverse_flag = False):
+    manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 
+                              base_position = np.array((250, 200)))
+    map = costmap.Map4()
+    vis = Visualizer(map.map)
+    if(not reverse_flag):
+        start = np.array((0,1.56,1.2,0,0))
+        goal = np.array((2.0,2.0,1.56,1.56, 1.56))
+    else:
+        start = np.array((2.0,2.0,1.56,1.56, 1.56))
+        goal = np.array((0,1.56,1.2,0,0))
+
+    planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
+                 map = map, manipulator = manipulator)
+
+    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=2)
     
-    # path = []
-    # with open('filename.pickle', 'rb') as handle:
-    #     path = pickle.load(handle)
+    obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
+    print(obstacle_cost, smoothness_cost)
+    return planner.population[0][2], obstacle_cost, smoothness_cost
 
-    with open('filename.pickle', 'wb') as handle:
-        pickle.dump(path, handle, protocol=pickle.HIGHEST_PROTOCOL)
+def main():
+    map1_cost = []
+    map2_cost = []
+    map3_cost = []
+    for i in range(1, 20):
+        np.random.seed(i)
+        map1_traj, map1_obstacle_cost, map1_smoothness_cost = Map1(i>=10)
+        map1_cost.append([map1_obstacle_cost, map1_smoothness_cost])
+        np.save('../data/ga/ga_map1_' + str(i) + '.npy', map1_traj)
+        with open('../data/ga/ga_map1.csv', mode='a') as file_:
+            file_.write("{},{}".format(map1_obstacle_cost, map1_smoothness_cost))
+            file_.write("\n")
 
-    vis.traj_vis(path)
-    plt.show()
+
+        # map2_traj, map2_obstacle_cost, map2_smoothness_cost = Map2(i>=10)
+        # map2_cost.append([map2_obstacle_cost, map2_smoothness_cost])
+        # np.save('../data/ga/ga_map2_' + str(i) + '.npy', map2_traj)
+        # with open('../data/ga/ga_map2.csv', mode='a') as file_:
+        #     file_.write("{},{}".format(map2_obstacle_cost, map2_smoothness_cost))
+        #     file_.write("\n")
+
+        # map3_traj, map3_obstacle_cost, map3_smoothness_cost = Map3(i>=10)
+        # map3_cost.append([map3_obstacle_cost, map3_smoothness_cost])
+        # np.save('../data/ga/ga_map3_' + str(i) + '.npy', map3_traj)
+        # with open('../data/ga/ga_map3.csv', mode='a') as file_:
+        #     file_.write("{},{}".format(map3_obstacle_cost, map3_smoothness_cost))
+        #     file_.write("\n")
+
+    np.savetxt("../data/ga/ga_map1.csv", np.array(map1_cost), delimiter=",")
+    np.savetxt("../data/ga/ga_map2.csv", np.array(map2_cost), delimiter=",")
+    np.savetxt("../data/ga/ga_map3.csv", np.array(map3_cost), delimiter=",")
 
 if __name__ == "__main__":
     main()

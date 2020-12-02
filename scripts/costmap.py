@@ -23,13 +23,14 @@ class CostMap:
 
     def computeCost(self):
         self.map = self.map.T
+        # self.visualize(self.map)
         distance_field = distance_transform_edt(self.map)
         # self.visualize(distance_field)
         high_value_flags = distance_field > self.threshold 
         self.cost_map = self.threshold - distance_field
         self.cost_map[high_value_flags] = 0
         # self.visualize(self.cost_map)
-        self.gy, self.gx = np.gradient(self.cost_map)
+        # self.gy, self.gx = np.gradient(self.cost_map)
         # self.visualize(self.gx)
 
     def visualize(self, map):
@@ -38,23 +39,44 @@ class CostMap:
 
 class Map1(CostMap):
     def __init__(self):
-        CostMap.__init__(self)
+        CostMap.__init__(self, x_len = 700)
         self.addObstacle(cx = 75, cy = 300, lx = 150, ly = 15)
         self.addObstacle(cx = 245, cy = 450, lx = 15, ly = 200)
+        self.addObstacle(cx = 425, cy = 200, lx = 150, ly = 15)
+        self.addObstacle(cx = 255, cy = 50, lx = 15, ly = 200)
         self.computeCost()
 
 class Map2(CostMap):
     def __init__(self):
-        CostMap.__init__(self)
+        CostMap.__init__(self, x_len = 700)
         self.addObstacle(cx = 75, cy = 300, lx = 150, ly = 15)
         self.addObstacle(cx = 245, cy = 450, lx = 15, ly = 200)
+        self.addObstacle(cx = 425, cy = 200, lx = 150, ly = 15)
+        self.addObstacle(cx = 255, cy = 50, lx = 15, ly = 200)
         self.computeCost()
         self.cost_map = np.where(self.cost_map < 45, 0, self.cost_map)
 
+class Map3(CostMap):
+    def __init__(self):
+        CostMap.__init__(self, x_len = 700)
+        self.addObstacle(cx = 75, cy = 300, lx = 150, ly = 15)
+        self.addObstacle(cx = 245, cy = 450, lx = 15, ly = 200)
+        self.addObstacle(cx = 400, cy = 350, lx = 100, ly = 20)
+        self.addObstacle(cx = 400, cy = 300, lx = 30, ly = 30)
+        self.computeCost()
+
+class Map4(CostMap):
+    def __init__(self):
+        CostMap.__init__(self, x_len = 700, y_len = 700)
+        self.addObstacle(cx = 250, cy = 465, lx = 15, ly = 200)
+        self.addObstacle(cx = 100, cy = 465, lx = 15, ly = 200)
+        self.addObstacle(cx = 400, cy = 400, lx = 100, ly = 20)
+        self.addObstacle(cx = 400, cy = 300, lx = 30, ly = 30)
+        self.computeCost()
 
 
 def main():
-    cost_map = Map1()
+    cost_map = Map3()
     cost_map.visualize(cost_map.map)
     # cost_map = CostMap()
     # cost_map.addObstacle(cx = 20, cy = 30, lx = 100, ly = 30)
