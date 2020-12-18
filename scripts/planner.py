@@ -15,7 +15,9 @@ class Planner:
             for i in range(len(links_pts_x)):
                 for j in range(len(links_pts_x[i])):
                     obstacle_cost = obstacle_cost + self.map.cost_map[int(links_pts_y[i][j])][int(links_pts_x[i][j])]
-
+                    if(self.map.cost_map[int(links_pts_y[i][j])][int(links_pts_x[i][j])] == 50):
+                        # print("Problem")
+                        obstacle_cost += 10000000
         for i in range(1, len(traj)):
             smoothness_cost += np.sum(np.abs(traj[i] - traj[i-1]))
         

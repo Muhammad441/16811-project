@@ -32,4 +32,16 @@ class Visualizer:
             Ln.set_xdata(x_c)
             Ln.set_ydata(y_c)
             plt.pause(0.2)
+            # plt.waitforbuttonpress()
         plt.waitforbuttonpress()
+
+    def stationary_traj_vis(self, traj):
+        fig, ax = plt.subplots()
+        for state in traj:
+            x_c, y_c = state[0], state[1]
+            ax.imshow(self.map)
+            ax.plot(x_c,y_c,'-*')
+            ax.plot(x_c[0],y_c[0],'^')
+            ax.set_aspect('equal', adjustable='box')
+        # plt.legend()
+        plt.show()

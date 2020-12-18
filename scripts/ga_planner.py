@@ -36,7 +36,6 @@ class GAPlanner(Planner):
         self.alpha=alpha
         self.beta=beta
         self.population_size=population_size
-        # self.trajUnfitScore(self.traj)
         self.population = self.generateInitialPopulation()
         for i in range(max_iters):
             self.population = self.next_generation(self.population)
@@ -96,7 +95,6 @@ class GAPlanner(Planner):
             sel_indiv = np.random.randint(eliteism,len(population))
             sel_wp = np.random.randint(1,self.num_waypoints-1)
             sel_lk = np.random.randint(0,self.manipulator.num_links)
-            #population[sel_indiv][2][sel_wp,sel_lk] = np.random.uniform(low=-3.14159, high=3.14159)
             population[sel_indiv][2][sel_wp,sel_lk] = np.random.normal(population[sel_indiv][2][sel_wp,sel_lk], scale=0.3)
             population[sel_indiv][2][sel_wp,sel_lk] = np.clip(population[sel_indiv][2][sel_wp,sel_lk], -3.14159, 3.14159)
             affected.append(sel_indiv)
@@ -161,45 +159,13 @@ class GAPlanner(Planner):
                     for pt in range(len(links_pts_x2[j])):
                         poly_c.append((links_pts_x2[-(1+j)][pt],links_pts_y2[-(1+j)][pt]))
                 ImageDraw.Draw(img).polygon(poly_c, outline=1, fill=1)
-                # img_ = Image.new('L', (self.map.cost_map.shape[1], self.map.cost_map.shape[0]), 0)
-                # ImageDraw.Draw(img_).polygon(poly_c, outline=1, fill=1)
-                # smoothingCost += np.sum(np.array(img_))
 
         mask = np.array(img)
-        # plt.imshow(mask)
-        # plt.show()
         filled = imfill(mask)
-        # plt.imshow(filled)
-        # plt.show()
         area = self.map.cost_map[filled].sum()
-        # print ("obstacle", np.sum(self.map.cost_map[filled]==50.0))
         trajCost += self.beta*area + 0.1*smoothingCost
 
         return trajCost
-
-# def Map3():
-#     manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 
-#                               base_position = np.array((250, 200)))
-#     map = costmap.Map4()
-#     vis = Visualizer(map.map)
-#     start = np.array((0,1.56,1.2,0,0))
-#     goal = np.array((2.0,2.0,1.56,1.56, 1.56))
-#     vis.state_vis(manipulator.ForwardKinematics(start))
-#     vis.state_vis(manipulator.ForwardKinematics(goal))
-
-#     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
-#                  map = map, manipulator = manipulator)
-
-#     planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=300)
-#     path = []
-#     for i in range(planner.traj.shape[0]-1):
-#         traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
-#         for j in range(traj.shape[0]):
-#             path.append(manipulator.ForwardKinematics(traj[j]))
-                
-#     pdb.set_trace()
-#     vis.traj_vis(path)
-#     plt.show()
 
 def Map2(reverse_flag = False):
     manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 

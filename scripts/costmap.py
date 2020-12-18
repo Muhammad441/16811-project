@@ -23,13 +23,13 @@ class CostMap:
 
     def computeCost(self):
         self.map = self.map.T
-        # self.visualize(self.map)
+        self.visualize(self.map)
         distance_field = distance_transform_edt(self.map)
         # self.visualize(distance_field)
         high_value_flags = distance_field > self.threshold 
         self.cost_map = self.threshold - distance_field
         self.cost_map[high_value_flags] = 0
-        # self.visualize(self.cost_map)
+        self.visualize(self.cost_map)
         # self.gy, self.gx = np.gradient(self.cost_map)
         # self.visualize(self.gx)
 

@@ -88,24 +88,10 @@ class SimAnnealingPlanner(Planner):
             flag = True
             while flag:
                 new_state = (np.random.rand(neighbor[idx].shape[0])*2 - 1)*max_change + neighbor[idx]
-                # print(self.norm(new_state, neighbor[idx]))
                 if(self.norm(new_state, neighbor[idx]) < threshold):
                     neighbor[idx] = copy.deepcopy(new_state)
                     flag = False
 
-        # change = (np.random.rand(neighbor.shape[0], neighbor.shape[1])*2 - 1)*max_change
-        # change[0] = 0
-        # change[-1] = 0
-        # neighbor[idx] = new_state
-        # for i in range(traj.shape[0]):
-        #     if(random.random() > 0.5):
-        #         if i != 0 and i!= traj.shape[1] - 1:
-        #             pdb.set_trace()
-        #             change = (np.random.rand(1, neighbor.shape[1])*2 - 1)*max_change
-        #             traj[i] += change
-        # change = (np.random.rand(neighbor.shape[0],neighbor.shape[1])*2 - 1)*max_change
-        # change[0] = 0
-        # change[-1] = 0
         return neighbor
 
 
@@ -122,37 +108,19 @@ class SimAnnealingPlanner(Planner):
             traj_neighbor = self.getNeighbor(traj_curr)
             neighbor_cost = self.trajCost(traj_neighbor)
             temp_curr *= 0.99
-            # print(temp_curr)
-            # print(curr_cost, neighbor_cost)
-            # print("Difference : {}".format(curr_cost - neighbor_cost))
             if(neighbor_cost < curr_cost):
-                # print("Accepted 1")
                 traj_curr = copy.deepcopy(traj_neighbor)
                 curr_cost = neighbor_cost
                 if(neighbor_cost < best_cost):
                     traj_best = copy.deepcopy(traj_neighbor)
                     best_cost = neighbor_cost
             else:
-                # print(curr_cost - neighbor_cost)
-                # if(curr_cost -s neighbor_cost < 1):
-                    # if(random.random() > (curr_cost - neighbor_cost)/1000 + .05* int(opt_step/100)):
                 if (np.exp((curr_cost - neighbor_cost)/temp_curr) > random.random()):
-                        # print(opt_step, " Accepted 2", curr_cost - neighbor_cost)
                         traj_curr = copy.deepcopy(traj_neighbor)
                         curr_cost = neighbor_cost
-            # print(best_cost)
             if(best_cost <= 30):
                 break
-            # print("Difference1 ", (curr_cost - neighbor_cost))
-            # print("Difference2 ", np.exp((curr_cost - neighbor_cost)/temp_curr), (curr_cost - neighbor_cost))
-            
-            # else:
-            #     # print("Temp ", np.exp((curr_cost - neighbor_cost)/temp_curr))
-            #     if (np.exp((curr_cost - neighbor_cost)/temp_curr) > random.random()):
-            #         # print("Accepted 2 ", curr_cost - neighbor_cost, temp_curr, np.exp((curr_cost - neighbor_cost)/temp_curr))
-            #         traj_curr = copy.deepcopy(traj_neighbor)
-            #         curr_cost = neighbor_cost
-        
+                    
         self.traj = traj_best
 
     def trajObstacleCost(self, traj):
@@ -209,44 +177,12 @@ class SimAnnealingPlanner(Planner):
                 ImageDraw.Draw(img_).polygon(poly_c, outline=1, fill=1)
                 smoothingCost += np.sum(np.array(img_))
         mask = np.array(img)
-        # plt.imshow(mask)
-        # plt.show()
         filled = imfill(mask)
-        # plt.imshow(filled)
-        # plt.show()
         area = self.map.cost_map[filled].sum()
-        # print ("obstacle", np.sum(self.map.cost_map[filled]==50.0))
         self.beta = 1
         trajCost += self.beta*area + 0.1*smoothingCost
 
         return trajCost
-
-# def Map3():
-#     manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 
-#                               base_position = np.array((250, 200)))
-#     map = costmap.Map4()
-#     vis = Visualizer(map.map)
-#     start = np.array((0,1.56,1.2,0,0))
-#     goal = np.array((2.0,2.0,1.56,1.56, 1.56))
-#     vis.state_vis(manipulator.ForwardKinematics(start))
-#     vis.state_vis(manipulator.ForwardKinematics(goal))
-#     planner = SimAnnealingPlanner(start = start, goal = goal, num_waypoints = 10, 
-#                  map = map, manipulator = manipulator)
-    
-
-#     planner.optimize(num_opt_steps=3000)
-#     pdb.set_trace()
-#     path = []
-#     for i in range(planner.traj.shape[0]-1):
-#         traj = planner.interpolatePath(planner.traj[i,:],planner.traj[i+1,:],6)
-#         for j in range(traj.shape[0]):
-#             path.append(manipulator.ForwardKinematics(traj[j]))
-#     vis.traj_vis(path)
-#     plt.show()
-    
-#     pdb.set_trace()
-#     vis.traj_vis(path)
-#     plt.show()
 
 def Map2(reverse_flag = False):
     manipulator = Manipulator(num_links = 5, link_lengths = np.ones(5)*75, 
