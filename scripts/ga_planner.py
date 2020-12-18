@@ -183,7 +183,16 @@ def Map2(reverse_flag = False):
     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
 
-    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=2)
+    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=40)
+
+    path = []
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+    vis.traj_vis(path)
+    plt.show()
+
 
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
@@ -201,10 +210,18 @@ def Map1(reverse_flag = False):
         start = np.array((0.1,0,0,0))
         goal = np.array((0.1,1.7,1.7,1.5))
 
-    planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
+    planner = GAPlanner(start = start, goal = goal, num_waypoints = 40, 
                  map = map, manipulator = manipulator)
 
     planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=2)
+
+    path = []
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+    vis.traj_vis(path)
+    plt.show()
 
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
@@ -225,8 +242,17 @@ def Map3(reverse_flag = False):
     planner = GAPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
 
-    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=2)
-    
+    planner.optimize(population_size=50,alpha=900.0, beta=1., max_iters=60)
+
+    path = []
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.seedPath(planner.population[0][2][i,:],planner.population[0][2][i+1,:],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+    vis.traj_vis(path)
+    plt.show()
+
+
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
     return planner.population[0][2], obstacle_cost, smoothness_cost

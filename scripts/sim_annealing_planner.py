@@ -200,6 +200,13 @@ def Map2(reverse_flag = False):
                  map = map, manipulator = manipulator)    
 
     planner.optimize(num_opt_steps=1000)
+    path = []
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.interpolatePath(planner.traj[i], planner.traj[i+1],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+    vis.traj_vis(path)
+    plt.show()
 
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
@@ -223,6 +230,13 @@ def Map1(reverse_flag = False):
     
 
     planner.optimize(num_opt_steps=1500)
+    path = []
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.interpolatePath(planner.traj[i], planner.traj[i+1],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+    vis.traj_vis(path)
+    plt.show()
 
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
@@ -243,6 +257,14 @@ def Map3(reverse_flag = False):
     planner = SimAnnealingPlanner(start = start, goal = goal, num_waypoints = 10, 
                  map = map, manipulator = manipulator)
     planner.optimize(num_opt_steps=5000)
+
+    path = []
+    for i in range(planner.traj.shape[0]-1):
+        traj = planner.interpolatePath(planner.traj[i], planner.traj[i+1],10)
+        for j in range(traj.shape[0]):
+            path.append(manipulator.ForwardKinematics(traj[j]))
+    vis.traj_vis(path)
+    plt.show()
 
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)

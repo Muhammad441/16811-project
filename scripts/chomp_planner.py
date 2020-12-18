@@ -97,6 +97,12 @@ def Map1(reverse_flag = False):
 
     planner.gradientOpt(num_opt_steps=600, threshold = 1) #600
 
+    path = []
+    for i in range(planner.traj.shape[0]):
+        path.append(manipulator.ForwardKinematics(planner.traj[i]))
+    vis.traj_vis(path)
+    plt.show()
+
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
     return planner.traj, obstacle_cost, smoothness_cost
@@ -119,6 +125,11 @@ def Map2(reverse_flag = False):
 
     planner.gradientOpt(num_opt_steps=1000, threshold = 1) #1000
 
+    path = []
+    for i in range(planner.traj.shape[0]):
+        path.append(manipulator.ForwardKinematics(planner.traj[i]))
+    vis.traj_vis(path)
+    plt.show()
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
 
@@ -142,6 +153,12 @@ def Map3(reverse_flag = False):
 
     planner.gradientOpt(num_opt_steps=9000, threshold = 1) #5000
 
+    path = []
+    for i in range(planner.traj.shape[0]):
+        path.append(manipulator.ForwardKinematics(planner.traj[i]))
+    vis.traj_vis(path)
+    plt.show()
+
     obstacle_cost, smoothness_cost = planner.trajectoryCost(planner.traj)
     print(obstacle_cost, smoothness_cost)
     return planner.traj, obstacle_cost, smoothness_cost
@@ -151,6 +168,7 @@ def main():
     map2_cost = []
     map3_cost = []
     for i in range(20):
+        print("i ", i)
         map1_traj, map1_obstacle_cost, map1_smoothness_cost = Map1(i>=10)
         map1_cost.append([map1_obstacle_cost, map1_smoothness_cost])
         np.save('../data/chomp/chomp_map1_' + str(i) + '.npy', map1_traj)
